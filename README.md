@@ -21,14 +21,21 @@ Text Translator is a Chrome extension that allows users to translate selected te
 4. Click "Load unpacked" and select the directory containing the extension files.
 
 ## Usage
-
 ### Translating Selected Text on Web Pages
 
 1. Select text on any web page.
 2. For single words, the translation will appear automatically in a tooltip.
-3. For multiple words, press the 'T' key to trigger the translation.
+3. For multiple words, press the 'T' key or the 'Shift' key to trigger the translation.
 
 ### Translating Text via Extension Popup
+
+### Changing Theme
+
+1. Click on the extension icon to open the popup.
+2. Navigate to the "Settings" tab.
+3. Use the "Dark Mode" toggle switch to change between light and dark themes.
+4. The selected theme will be saved and applied automatically on subsequent uses.
+
 
 1. Click on the extension icon in the Chrome toolbar to open the popup.
 2. Select your desired target language from the dropdown menu.

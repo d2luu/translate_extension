@@ -23,6 +23,16 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       sendResponse,
     );
     return true; // Indicates that the response is sent asynchronously
+  } else if (request.action === "updateTheme") {
+    // Propagate theme change to all tabs
+    chrome.tabs.query({}, function (tabs) {
+      tabs.forEach(function (tab) {
+        chrome.tabs.sendMessage(tab.id, {
+          action: "themeChanged",
+          theme: request.theme,
+        });
+      });
+    });
   }
 });
 

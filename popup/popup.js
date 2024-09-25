@@ -1,4 +1,37 @@
 document.addEventListener("DOMContentLoaded", function () {
+  // Tab switching
+  const tabButtons = document.querySelectorAll(".tab-button");
+  const tabContents = document.querySelectorAll(".tab-content");
+
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const tabName = button.getAttribute("data-tab");
+      tabButtons.forEach((btn) => btn.classList.remove("active"));
+      tabContents.forEach((content) => content.classList.remove("active"));
+      button.classList.add("active");
+      document.getElementById(`${tabName}Tab`).classList.add("active");
+    });
+  });
+
+  // Theme switching
+  const themeToggle = document.getElementById("themeToggle");
+
+  // Load saved theme
+  chrome.storage.sync.get("theme", function (data) {
+    const savedTheme = data.theme || "light";
+    themeToggle.checked = savedTheme === "dark";
+    document.body.classList.toggle("dark-mode", savedTheme === "dark");
+  });
+  themeToggle.addEventListener("change", function () {
+    const isDarkMode = themeToggle.checked;
+    const newTheme = isDarkMode ? "dark" : "light";
+    document.body.classList.toggle("dark-mode", isDarkMode);
+    chrome.storage.sync.set({ theme: newTheme });
+
+    // Send message to background script to update theme
+    chrome.runtime.sendMessage({ action: "updateTheme", theme: newTheme });
+  });
+
   const translateButton = document.getElementById("translateButton");
   const languageSelect = document.getElementById("targetLanguage");
   const inputText = document.getElementById("inputText");
