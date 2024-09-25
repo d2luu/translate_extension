@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Translator</title>
+        <link rel="stylesheet" href="popup.css" />
+    </head>
+    <body>
+        <div class="header">
+            <div class="logo">T</div>
+            <h2>Translator</h2>
+        </div>
+        <div class="translation-container">
+            <div class="translation-header">
+                <label for="targetLanguage">Translate to:</label>
+                <select id="targetLanguage">
+                    <option value="vi">Vietnamese</option>
+                    <option value="en">English</option>
+                    <option value="ja">Japanese</option>
+                    <option value="zh">Chinese</option>
+                </select>
+            </div>
+            <textarea
+                id="inputText"
+                placeholder="Enter text to translate"
+            ></textarea>
+        </div>
+        <div class="button-container">
+            <button id="translateButton">Translate</button>
+        </div>
+        <div id="statusMessage"></div>
+        <div id="translationResult"></div>
+        <script src="popup.js"></script>
+        <div class="footer">
+            Made by AI &
+            <a href="https://www.facebook.com/d2luu" target="_blank">@d2luu</a>
+        </div>
+    </body>
+</html>
