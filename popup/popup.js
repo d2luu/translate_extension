@@ -32,11 +32,126 @@ document.addEventListener("DOMContentLoaded", function () {
     chrome.runtime.sendMessage({ action: "updateTheme", theme: newTheme });
   });
 
+  // API Key Management
+  const apiKeyInput = document.getElementById("apiKeyInput");
+  const addApiKeyButton = document.getElementById("addApiKeyButton");
+  const apiKeyList = document.getElementById("apiKeyList");
+
+  function loadApiKeys() {
+    chrome.storage.sync.get("apiKeys", function (data) {
+      const apiKeys = data.apiKeys || [];
+      updateApiKeyList(apiKeys);
+    });
+  }
+  function updateApiKeyList(apiKeys) {
+    apiKeyList.innerHTML = "";
+    apiKeys.forEach((key, index) => {
+      const item = document.createElement("div");
+      item.className = "api-key-item";
+      item.draggable = true;
+      item.dataset.index = index;
+      item.innerHTML = `
+        <span class="drag-handle">&#9776;</span>
+        <span>API Key ${index + 1}: ${key.substring(0, 5)}...</span>
+        <button class="remove-key">Remove</button>
+      `;
+      item.querySelector(".remove-key").onclick = () => removeApiKey(index);
+      item.addEventListener("dragstart", dragStart);
+      item.addEventListener("dragover", dragOver);
+      item.addEventListener("drop", drop);
+      apiKeyList.appendChild(item);
+    });
+  }
+
+  function addApiKey(key) {
+    chrome.storage.sync.get("apiKeys", function (data) {
+      const apiKeys = data.apiKeys || [];
+      apiKeys.push(key);
+      chrome.storage.sync.set({ apiKeys: apiKeys }, function () {
+        updateApiKeyList(apiKeys);
+        apiKeyInput.value = "";
+      });
+    });
+  }
+
+  function removeApiKey(index) {
+    chrome.storage.sync.get("apiKeys", function (data) {
+      const apiKeys = data.apiKeys || [];
+      apiKeys.splice(index, 1);
+      chrome.storage.sync.set({ apiKeys: apiKeys }, function () {
+        updateApiKeyList(apiKeys);
+      });
+    });
+  }
+
+  function dragStart(e) {
+    e.dataTransfer.setData("text/plain", e.target.dataset.index);
+  }
+
+  function dragOver(e) {
+    e.preventDefault();
+  }
+
+  function drop(e) {
+    e.preventDefault();
+    const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
+    const toIndex = Array.from(apiKeyList.children).indexOf(
+      e.target.closest(".api-key-item"),
+    );
+    chrome.storage.sync.get("apiKeys", function (data) {
+      const apiKeys = data.apiKeys || [];
+      const [removed] = apiKeys.splice(fromIndex, 1);
+      apiKeys.splice(toIndex, 0, removed);
+      chrome.storage.sync.set({ apiKeys: apiKeys }, function () {
+        updateApiKeyList(apiKeys);
+      });
+    });
+  }
+
+  addApiKeyButton.addEventListener("click", function () {
+    const key = apiKeyInput.value.trim();
+    if (key) {
+      addApiKey(key);
+    }
+  });
+
+  loadApiKeys();
+
   const translateButton = document.getElementById("translateButton");
   const languageSelect = document.getElementById("targetLanguage");
   const inputText = document.getElementById("inputText");
   const statusMessage = document.getElementById("statusMessage");
   const translationResult = document.getElementById("translationResult");
+
+  // Hide translation result wrapper and copy button initially
+  const translationResultWrapper = document.querySelector(
+    ".translation-result-wrapper",
+  );
+  const copyButtonContainer = document.querySelector(".copy-button-container");
+  if (translationResultWrapper && copyButtonContainer) {
+    translationResultWrapper.style.display = "none";
+    copyButtonContainer.style.display = "none";
+  }
+
+  // Copy translation to clipboard
+  const copyButton = document.getElementById("copyButton");
+  copyButton.addEventListener("click", function () {
+    const textToCopy = translationResult.textContent;
+    navigator.clipboard.writeText(textToCopy).then(
+      function () {
+        updateStatus("Copied to clipboard!", "#4caf50");
+        copyButton.setAttribute("data-tooltip", "Copied to clipboard!");
+        setTimeout(() => {
+          updateStatus("", "");
+          copyButton.setAttribute("data-tooltip", "Copy to clipboard");
+        }, 2000);
+      },
+      function (err) {
+        console.error("Could not copy text: ", err);
+        updateStatus("Failed to copy. Please try again.", "#f44336");
+      },
+    );
+  });
 
   const DEFAULT_LANGUAGE = "vi";
 
@@ -50,16 +165,24 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function updateTranslation(text) {
-    if (translationResult) {
+    const wrapper = document.querySelector(".translation-result-wrapper");
+    const copyButton = document.querySelector(".copy-button-container");
+    if (translationResult && wrapper && copyButton) {
       translationResult.textContent = text;
+      wrapper.style.display = text ? "block" : "none";
+      copyButton.style.display = text ? "block" : "none";
     } else {
-      console.error("Translation result element not found");
+      console.error("Translation result elements not found");
     }
   }
 
   function clearTranslation() {
-    if (translationResult) {
+    const wrapper = document.querySelector(".translation-result-wrapper");
+    const copyButton = document.querySelector(".copy-button-container");
+    if (translationResult && wrapper && copyButton) {
       translationResult.textContent = "";
+      wrapper.style.display = "none";
+      copyButton.style.display = "none";
     }
   }
 
@@ -99,7 +222,6 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   }
-
   if (translateButton && inputText) {
     translateButton.addEventListener("click", function () {
       const textToTranslate = inputText.value.trim();
@@ -107,7 +229,7 @@ document.addEventListener("DOMContentLoaded", function () {
       console.log("Translating to:", targetLanguage);
       if (textToTranslate) {
         clearTranslation();
-        updateStatus("Translating...", "blue");
+        updateStatus("Translating...", "#4285f4");
         setButtonState(false);
         chrome.runtime.sendMessage(
           {
@@ -118,9 +240,12 @@ document.addEventListener("DOMContentLoaded", function () {
           function (response) {
             if (chrome.runtime.lastError) {
               console.error("Error:", chrome.runtime.lastError);
-              updateStatus("Error translating text. Please try again.", "red");
+              updateStatus(
+                "Error translating text. Please try again.",
+                "#f44336",
+              );
             } else {
-              updateStatus("Translation complete!", "green");
+              updateStatus("Translation complete!", "#4caf50");
               updateTranslation(response.translation);
               console.log("Translated to:", response.targetLanguage);
             }
@@ -128,7 +253,8 @@ document.addEventListener("DOMContentLoaded", function () {
           },
         );
       } else {
-        updateStatus("Please enter text to translate.", "red");
+        updateStatus("Please enter text to translate.", "#f44336");
+        clearTranslation();
       }
     });
   }

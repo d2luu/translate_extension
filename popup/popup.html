@@ -1,58 +1,136 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Translator</title>
-    <link rel="stylesheet" href="popup.css" />
-</head>
-<body>
-    <header class="header">
-        <div class="logo">T</div>
-        <h1>Translator</h1>
-    </header>
-    <nav class="tab-container">
-        <button class="tab-button active" data-tab="main">Main</button>
-        <button class="tab-button" data-tab="settings">Settings</button>
-    </nav>
-    <main>
-        <section id="mainTab" class="tab-content active">
-            <div class="translation-container">
-                <div class="translation-header">
-                    <label for="targetLanguage">Translate to:</label>
-                    <select id="targetLanguage">
-                        <option value="vi">Vietnamese</option>
-                        <option value="en">English</option>
-                        <option value="ja">Japanese</option>
-                        <option value="zh">Chinese</option>
-                    </select>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Translator</title>
+        <link rel="stylesheet" href="popup.css" />
+    </head>
+    <body>
+        <header class="header">
+            <div class="logo">T</div>
+            <h1>Translator</h1>
+        </header>
+        <nav class="tab-container">
+            <button class="tab-button active" data-tab="main">
+                <img
+                    src="../static/translate_icon.svg"
+                    alt="Translate"
+                    class="tab-icon"
+                />
+            </button>
+            <button class="tab-button" data-tab="settings">
+                <img
+                    src="../static/settings_icon.svg"
+                    alt="Settings"
+                    class="tab-icon"
+                />
+            </button>
+        </nav>
+        <main>
+            <section id="mainTab" class="tab-content active">
+                <div class="translation-container">
+                    <div class="translation-header">
+                        <h2>Translate to:</h2>
+                        <div class="language-select">
+                            <select id="targetLanguage">
+                                <option value="vi">Vietnamese</option>
+                                <option value="en">English</option>
+                                <option value="ja">Japanese</option>
+                                <option value="zh">Chinese</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-area">
+                        <textarea
+                            id="inputText"
+                            placeholder="Enter text to translate"
+                            rows="5"
+                        ></textarea>
+                    </div>
+                    <div class="action-area">
+                        <button id="translateButton" class="btn-primary">
+                            Translate
+                        </button>
+                    </div>
                 </div>
-                <textarea
-                    id="inputText"
-                    placeholder="Enter text to translate"
-                    rows="5"
-                ></textarea>
-                <button id="translateButton" class="btn-primary">Translate</button>
-            </div>
-            <div id="statusMessage" class="status-message"></div>
-            <div id="translationResult" class="translation-result"></div>
-        </section>
-        <section id="settingsTab" class="tab-content">
-            <h2>Settings</h2>
-            <div class="setting-item">
-                <span>Theme:</span>
-                <label class="switch" for="themeToggle">
-                    <input type="checkbox" id="themeToggle">
-                    <span class="slider round"></span>
-                </label>
-                <span id="themeLabel">Light</span>
-            </div>
-        </section>
-    </main>
-    <footer class="footer">
-        Made by AI &
-        <a href="https://www.facebook.com/d2luu" target="_blank">@d2luu</a>
-    </footer>
-    <script src="popup.js"></script>
-</body>
+                <div class="result-container">
+                    <div id="statusMessage" class="status-message"></div>
+                    <div class="translation-result-wrapper">
+                        <div id="translationResult"></div>
+                    </div>
+                    <div class="copy-button-container">
+                        <button
+                            id="copyButton"
+                            class="copy-button"
+                            title="Copy to clipboard"
+                        >
+                            <img
+                                src="../static/copy_icon.svg"
+                                alt="Copy"
+                                class="copy-icon"
+                            />
+                        </button>
+                    </div>
+                </div>
+            </section>
+            <section id="settingsTab" class="tab-content">
+                <h2>Settings</h2>
+
+                <div class="setting-section">
+                    <h3>
+                        <img
+                            src="../static/theme_icon.svg"
+                            alt="Theme"
+                            class="setting-icon"
+                        />
+                        Theme
+                    </h3>
+                    <p>Choose between light and dark mode for the extension.</p>
+                    <div class="theme-toggle">
+                        <img
+                            src="../static/light_mode.svg"
+                            alt="Light Mode"
+                            class="theme-icon light-icon"
+                        />
+                        <label class="switch" for="themeToggle">
+                            <input type="checkbox" id="themeToggle" />
+                            <span class="slider round"></span>
+                        </label>
+                        <img
+                            src="../static/dark_mode.svg"
+                            alt="Dark Mode"
+                            class="theme-icon dark-icon"
+                        />
+                    </div>
+                </div>
+
+                <div class="setting-section">
+                    <h3>
+                        <img
+                            src="../static/api_key_icon.svg"
+                            alt="API Keys"
+                            class="setting-icon"
+                        />
+                        API Keys
+                    </h3>
+                    <p>Manage your API keys for translation services.</p>
+                    <div class="api-key-input">
+                        <input
+                            type="text"
+                            id="apiKeyInput"
+                            placeholder="Enter API key"
+                        />
+                        <button id="addApiKeyButton">Add</button>
+                    </div>
+                    <div id="apiKeyList" class="api-key-list"></div>
+                </div>
+            </section>
+        </main>
+        <footer class="footer">
+            Made by AI &
+            <a href="https://www.facebook.com/d2luu" target="_blank">@d2luu</a>
+        </footer>
+        <script src="popup.js"></script>
+    </body>
 </html>

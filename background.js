@@ -7,6 +7,10 @@ const LANGUAGE_MAPPING = {
   zh: "Chinese",
 };
 
+const DEFAULT_API_KEY = "AIzaSyAxu7PUuiANAPvpJkRC0Fgfvl4RhrXIVXE";
+
+let currentApiKeyIndex = 0;
+
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "translateText") {
     console.log(
@@ -16,12 +20,16 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     const targetLanguage =
       LANGUAGE_MAPPING[request.targetLanguage] || "Vietnamese";
     console.log("Mapped target language:", targetLanguage);
-    translateText(
-      request.text,
-      targetLanguage,
-      sender.tab ? sender.tab.id : null,
-      sendResponse,
-    );
+    chrome.storage.sync.get("apiKeys", function (data) {
+      const apiKeys = data.apiKeys || [];
+      translateTextWithRetry(
+        request.text,
+        targetLanguage,
+        apiKeys,
+        sender.tab ? sender.tab.id : null,
+        sendResponse,
+      );
+    });
     return true; // Indicates that the response is sent asynchronously
   } else if (request.action === "updateTheme") {
     // Propagate theme change to all tabs
@@ -36,76 +44,107 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   }
 });
 
-async function translateText(text, targetLanguage, tabId, sendResponse) {
+async function translateTextWithRetry(
+  text,
+  targetLanguage,
+  apiKeys,
+  tabId,
+  sendResponse,
+  retryCount = 0,
+) {
+  const allKeys = [DEFAULT_API_KEY, ...apiKeys];
+
+  if (retryCount >= allKeys.length) {
+    const errorMessage =
+      "Error: Rate limit reached for all API keys. Please wait a minute and try again or add more API keys to extend the limit.";
+    sendTranslationResponse(errorMessage, targetLanguage, tabId, sendResponse);
+    return;
+  }
+
+  const apiKey = allKeys[currentApiKeyIndex];
   try {
-    console.log("Starting translation process for text:", text);
-    console.log("Target language:", targetLanguage);
-
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyAxu7PUuiANAPvpJkRC0Fgfvl4RhrXIVXE",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: `You are an expert translator and a helpful assistant that translates text to ${targetLanguage}.
-                  Only translate, no more, and carefully check the translation for any grammatical errors.
-                  Additionally, use translation style that is appropriate for the ${targetLanguage}.
-                  Finally, verify the translation again before give it to the user.
-                  Translate the following text: ${text}`,
-                },
-              ],
-            },
-          ],
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    const translatedText = result.candidates[0].content.parts[0].text;
-    console.log("Translated text:", translatedText);
-    console.log(
-      "Translation completed successfully for target language:",
+    const translatedText = await fetchTranslation(text, targetLanguage, apiKey);
+    sendTranslationResponse(
+      translatedText,
       targetLanguage,
+      tabId,
+      sendResponse,
     );
-
-    if (tabId) {
-      chrome.tabs.sendMessage(tabId, {
-        action: "showTranslation",
-        translation: translatedText,
-        targetLanguage: targetLanguage,
-      });
-    } else {
-      sendResponse({
-        translation: translatedText,
-        targetLanguage: targetLanguage,
-      });
-    }
   } catch (error) {
-    console.error("Error in translation:", error);
-    console.error("Failed to translate to target language:", targetLanguage);
-    const errorMessage = `Error: ${error.message}`;
-    if (tabId) {
-      chrome.tabs.sendMessage(tabId, {
-        action: "showTranslation",
-        translation: errorMessage,
-        targetLanguage: targetLanguage,
-      });
+    if (error.message.includes("429")) {
+      console.log("Rate limit reached for API key. Trying next key.");
+      currentApiKeyIndex = (currentApiKeyIndex + 1) % allKeys.length;
+      await translateTextWithRetry(
+        text,
+        targetLanguage,
+        apiKeys,
+        tabId,
+        sendResponse,
+        retryCount + 1,
+      );
     } else {
-      sendResponse({
-        translation: errorMessage,
-        targetLanguage: targetLanguage,
-      });
+      sendTranslationResponse(
+        `Error: ${error.message}`,
+        targetLanguage,
+        tabId,
+        sendResponse,
+      );
     }
+  }
+}
+
+async function fetchTranslation(text, targetLanguage, apiKey) {
+  const response = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+      apiKey,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `You are an expert translator and a helpful assistant that translates text to ${targetLanguage}.
+                Only translate, no more, and carefully check the translation for any grammatical errors.
+                Additionally, use translation style that is appropriate for the ${targetLanguage}.
+                Finally, verify the translation again before give it to the user.
+                Translate the following text: ${text}`,
+              },
+            ],
+          },
+        ],
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const result = await response.json();
+  return result.candidates[0].content.parts[0].text;
+}
+
+function sendTranslationResponse(
+  translatedText,
+  targetLanguage,
+  tabId,
+  sendResponse,
+) {
+  if (tabId) {
+    chrome.tabs.sendMessage(tabId, {
+      action: "showTranslation",
+      translation: translatedText,
+      targetLanguage: targetLanguage,
+    });
+  } else {
+    sendResponse({
+      translation: translatedText,
+      targetLanguage: targetLanguage,
+    });
   }
 }
