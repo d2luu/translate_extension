@@ -52,8 +52,8 @@ document.addEventListener("DOMContentLoaded", function () {
       item.dataset.index = index;
       item.innerHTML = `
         <span class="drag-handle">&#9776;</span>
-        <span>API Key ${index + 1}: ${key.substring(0, 5)}...</span>
-        <button class="remove-key">Remove</button>
+        <span>API Key ${index + 1}: ${key.substring(0, 3)}...</span>
+        <span class="remove-key" title="Remove this API key">ー</span>
       `;
       item.querySelector(".remove-key").onclick = () => removeApiKey(index);
       item.addEventListener("dragstart", dragStart);
@@ -135,6 +135,134 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Copy translation to clipboard
   const copyButton = document.getElementById("copyButton");
+  const speakButton = document.getElementById("speakButton");
+  let voices = [];
+
+  function loadVoices() {
+    return new Promise((resolve) => {
+      let voicesLoaded = false;
+
+      function setVoices() {
+        voices = speechSynthesis.getVoices();
+        voicesLoaded = true;
+        resolve(voices);
+      }
+
+      if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = () => {
+          if (!voicesLoaded) {
+            setVoices();
+          }
+        };
+      }
+
+      // Try to load voices immediately
+      voices = speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        setVoices();
+      }
+
+      // If voices aren't loaded after 1 second, resolve anyway
+      setTimeout(() => {
+        if (!voicesLoaded) {
+          console.warn("Voices not loaded after timeout, continuing anyway.");
+          resolve(voices);
+        }
+      }, 1000);
+    });
+  }
+
+  function speakText(text, lang, retryCount = 0) {
+    return new Promise((resolve, reject) => {
+      if (!("speechSynthesis" in window)) {
+        reject(new Error("Text-to-speech not supported in this browser."));
+        return;
+      }
+
+      // Cancel any ongoing speech
+      speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+
+      utterance.onend = () => resolve();
+      utterance.onerror = (event) => {
+        if (event.error === "interrupted" && retryCount < 3) {
+          console.log(
+            `Speech synthesis interrupted. Retrying... (${retryCount + 1}/3)`,
+          );
+          setTimeout(() => {
+            speakText(text, lang, retryCount + 1)
+              .then(resolve)
+              .catch(reject);
+          }, 500); // Wait for 500 milliseconds before retrying
+        } else {
+          reject(new Error(`Speech synthesis failed: ${event.error}`));
+        }
+      };
+
+      const voice = voices.find((v) => v.lang.startsWith(lang));
+      if (voice) {
+        utterance.voice = voice;
+        console.log(`Using voice: ${voice.name} (${voice.lang})`);
+      } else {
+        console.warn(`No matching voice found for language: ${lang}`);
+      }
+
+      speechSynthesis.speak(utterance);
+    });
+  }
+
+  // Load voices when the document is ready
+  loadVoices().then(() => {
+    console.log(`Loaded ${voices.length} voices`);
+  });
+
+  speakButton.addEventListener("click", function () {
+    const textToSpeak = translationResult.textContent;
+    const lang = languageSelect.value;
+    if (textToSpeak) {
+      updateStatus("Speaking...", "#4285f4");
+      speakText(textToSpeak, lang)
+        .then(() => {
+          updateStatus("Speech completed", "#4caf50");
+          setTimeout(() => updateStatus("", ""), 2000);
+        })
+        .catch((error) => {
+          console.error("Speech synthesis error:", error);
+          updateStatus(error.message, "#f44336");
+        });
+    } else {
+      updateStatus("No translation to speak.", "#f44336");
+    }
+  });
+
+  function updateTranslation(text) {
+    const wrapper = document.querySelector(".translation-result-wrapper");
+    const copyButtonContainer = document.querySelector(
+      ".copy-button-container",
+    );
+    if (translationResult && wrapper && copyButtonContainer) {
+      translationResult.textContent = text;
+      wrapper.style.display = text ? "block" : "none";
+      copyButtonContainer.style.display = text ? "flex" : "none";
+    } else {
+      console.error("Translation result elements not found");
+    }
+  }
+
+  function clearTranslation() {
+    const wrapper = document.querySelector(".translation-result-wrapper");
+    const copyButtonContainer = document.querySelector(
+      ".copy-button-container",
+    );
+    if (translationResult && wrapper && copyButtonContainer) {
+      translationResult.textContent = "";
+      wrapper.style.display = "none";
+      copyButtonContainer.style.display = "none";
+    }
+  }
+
   copyButton.addEventListener("click", function () {
     const textToCopy = translationResult.textContent;
     navigator.clipboard.writeText(textToCopy).then(
@@ -170,7 +298,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (translationResult && wrapper && copyButton) {
       translationResult.textContent = text;
       wrapper.style.display = text ? "block" : "none";
-      copyButton.style.display = text ? "block" : "none";
+      copyButton.style.display = text ? "flex" : "none";
     } else {
       console.error("Translation result elements not found");
     }
