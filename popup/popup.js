@@ -1,4 +1,44 @@
 document.addEventListener("DOMContentLoaded", function () {
+  function updateIconsForTheme(isDarkMode) {
+    const iconMappings = {
+      api_key_icon: document.querySelector(
+        '.setting-icon[src*="api_key_icon"]',
+      ),
+      dark_mode: document.querySelector(".theme-icon.dark-icon"),
+      light_mode: document.querySelector(".theme-icon.light-icon"),
+      settings_icon: document.querySelector('.tab-icon[src*="settings_icon"]'),
+      theme_icon: document.querySelector('.setting-icon[src*="theme_icon"]'),
+      translate_icon: document.querySelector(
+        '.tab-icon[src*="translate_icon"]',
+      ),
+    };
+
+    for (const [iconName, element] of Object.entries(iconMappings)) {
+      if (element) {
+        const newSrc = isDarkMode
+          ? `../static/${iconName}_dark.svg`
+          : `../static/${iconName}.svg`;
+        element.src = newSrc;
+      }
+    }
+
+    // Handle copy and speak icons separately
+    const copyIcon = document.querySelector(".copy-icon");
+    const speakIcon = document.querySelector(".speak-icon");
+
+    if (copyIcon) {
+      copyIcon.src = isDarkMode
+        ? "../static/copy_icon_dark.svg"
+        : "../static/copy_icon.svg";
+    }
+
+    if (speakIcon) {
+      speakIcon.src = isDarkMode
+        ? "../static/voice_icon_dark.svg"
+        : "../static/voice_icon.svg";
+    }
+  }
+
   // Tab switching
   const tabButtons = document.querySelectorAll(".tab-button");
   const tabContents = document.querySelectorAll(".tab-content");
@@ -19,14 +59,28 @@ document.addEventListener("DOMContentLoaded", function () {
   // Load saved theme
   chrome.storage.sync.get("theme", function (data) {
     const savedTheme = data.theme || "light";
-    themeToggle.checked = savedTheme === "dark";
-    document.body.classList.toggle("dark-mode", savedTheme === "dark");
+    const isDarkMode = savedTheme === "dark";
+    themeToggle.checked = isDarkMode;
+    document.body.classList.toggle("dark-mode", isDarkMode);
+    if (typeof updateIconsForTheme === "function") {
+      updateIconsForTheme(isDarkMode);
+    } else {
+      console.warn("updateIconsForTheme function is not defined");
+    }
   });
+
   themeToggle.addEventListener("change", function () {
     const isDarkMode = themeToggle.checked;
     const newTheme = isDarkMode ? "dark" : "light";
     document.body.classList.toggle("dark-mode", isDarkMode);
     chrome.storage.sync.set({ theme: newTheme });
+
+    // Update icons for the new theme
+    if (typeof updateIconsForTheme === "function") {
+      updateIconsForTheme(isDarkMode);
+    } else {
+      console.warn("updateIconsForTheme function is not defined");
+    }
 
     // Send message to background script to update theme
     chrome.runtime.sendMessage({ action: "updateTheme", theme: newTheme });

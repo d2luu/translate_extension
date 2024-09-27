@@ -430,6 +430,11 @@ body.dark-mode .speak-icon {
     filter: invert(1);
 }
 
+body.dark-mode .copy-icon,
+body.dark-mode .speak-icon {
+    filter: none;
+}
+
 .copy-button span,
 .speak-button span {
     font-size: 14px;
