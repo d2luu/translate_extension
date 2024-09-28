@@ -99,14 +99,14 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   function updateApiKeyList(apiKeys) {
     apiKeyList.innerHTML = "";
-    apiKeys.forEach((key, index) => {
+    apiKeys.forEach((keyObj, index) => {
       const item = document.createElement("div");
       item.className = "api-key-item";
       item.draggable = true;
       item.dataset.index = index;
       item.innerHTML = `
         <span class="drag-handle">&#9776;</span>
-        <span>API Key ${index + 1}: ${key.substring(0, 3)}...</span>
+        <span>API Key ${index + 1}: ${keyObj.key && typeof keyObj.key === "string" ? keyObj.key.substring(0, 3) : ""}...</span>
         <span class="remove-key" title="Remove this API key">ー</span>
       `;
       item.querySelector(".remove-key").onclick = () => removeApiKey(index);
@@ -119,8 +119,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function addApiKey(key) {
     chrome.storage.sync.get("apiKeys", function (data) {
-      const apiKeys = data.apiKeys || [];
-      apiKeys.push(key);
+      let apiKeys = data.apiKeys || [];
+      // Convert old format keys to new format if necessary
+      apiKeys = apiKeys.map((k) =>
+        typeof k === "string" ? { type: "gemini", key: k } : k,
+      );
+      apiKeys.push({ type: "gemini", key: key });
       chrome.storage.sync.set({ apiKeys: apiKeys }, function () {
         updateApiKeyList(apiKeys);
         apiKeyInput.value = "";

@@ -22,7 +22,10 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     console.log("Mapped target language:", targetLanguage);
     chrome.storage.sync.get("apiKeys", function (data) {
       const userApiKeys = data.apiKeys || [];
-      const apiKeys = userApiKeys.length > 0 ? userApiKeys : [DEFAULT_API_KEY];
+      const apiKeys =
+        userApiKeys.length > 0
+          ? userApiKeys.map((keyObj) => keyObj.key)
+          : [DEFAULT_API_KEY];
       translateTextWithRetry(
         request.text,
         targetLanguage,
