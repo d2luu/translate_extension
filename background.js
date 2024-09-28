@@ -21,13 +21,15 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       LANGUAGE_MAPPING[request.targetLanguage] || "Vietnamese";
     console.log("Mapped target language:", targetLanguage);
     chrome.storage.sync.get("apiKeys", function (data) {
-      const apiKeys = data.apiKeys || [];
+      const userApiKeys = data.apiKeys || [];
+      const apiKeys = userApiKeys.length > 0 ? userApiKeys : [DEFAULT_API_KEY];
       translateTextWithRetry(
         request.text,
         targetLanguage,
         apiKeys,
         sender.tab ? sender.tab.id : null,
         sendResponse,
+        0,
       );
     });
     return true; // Indicates that the response is sent asynchronously
@@ -52,18 +54,18 @@ async function translateTextWithRetry(
   sendResponse,
   retryCount = 0,
 ) {
-  const allKeys = [DEFAULT_API_KEY, ...apiKeys];
-
-  if (retryCount >= allKeys.length) {
+  if (retryCount > apiKeys.length) {
     const errorMessage =
       "Error: Rate limit reached for all API keys. Please wait a minute and try again or add more API keys to extend the limit.";
     sendTranslationResponse(errorMessage, targetLanguage, tabId, sendResponse);
     return;
   }
 
-  const apiKey = allKeys[currentApiKeyIndex];
+  const apiKey = apiKeys[currentApiKeyIndex];
   try {
     const translatedText = await fetchTranslation(text, targetLanguage, apiKey);
+    // Reset retryCount and currentApiKeyIndex on successful translation
+    currentApiKeyIndex = 0;
     sendTranslationResponse(
       translatedText,
       targetLanguage,
@@ -73,7 +75,11 @@ async function translateTextWithRetry(
   } catch (error) {
     if (error.message.includes("429")) {
       console.log("Rate limit reached for API key. Trying next key.");
-      currentApiKeyIndex = (currentApiKeyIndex + 1) % allKeys.length;
+      currentApiKeyIndex = (currentApiKeyIndex + 1) % apiKeys.length;
+      // If we've cycled through all keys, try the first one again
+      if (currentApiKeyIndex === 0 && retryCount === apiKeys.length - 1) {
+        console.log("Trying first key one more time before giving up.");
+      }
       await translateTextWithRetry(
         text,
         targetLanguage,
