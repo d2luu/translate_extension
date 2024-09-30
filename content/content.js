@@ -138,13 +138,13 @@ function initializeContentScript() {
         // Immediately translate single words
         translateSelectedText();
       } else {
-        // For multiple words, show "Press 'T' to translate" message
+        // For multiple words, show "Press 'Shift' to translate" message
         if (!tooltip) createTooltip();
         const selection = window.getSelection();
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
         showTooltip(rect.left + window.scrollX, rect.bottom + window.scrollY);
-        updateTooltipContent("Press 'T' or 'Shift' to translate");
+        updateTooltipContent("Press'Shift' to translate");
       }
     } else {
       hideTooltip();
@@ -152,7 +152,7 @@ function initializeContentScript() {
   });
   document.addEventListener("keydown", function (event) {
     if (
-      (event.key === "T" || event.key === "t" || event.key === "Shift") &&
+      event.key === "Shift" &&
       !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)
     ) {
       const selectedText = window.getSelection().toString().trim();
