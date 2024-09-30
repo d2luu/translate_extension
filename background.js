@@ -103,9 +103,36 @@ async function translateTextWithRetry(
 }
 
 async function fetchTranslation(text, targetLanguage, apiKey) {
+  const safetySettings = [
+    {
+      category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+      threshold: "BLOCK_NONE",
+    },
+    {
+      category: "HARM_CATEGORY_HARASSMENT",
+      threshold: "BLOCK_NONE",
+    },
+    {
+      category: "HARM_CATEGORY_HATE_SPEECH",
+      threshold: "BLOCK_NONE",
+    },
+    {
+      category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      threshold: "BLOCK_NONE",
+    },
+  ];
+  const prompt = `You are an expert translator and a helpful assistant that translates text to ${targetLanguage}.
+  Only translate, no more, and carefully check the translation for any grammatical errors.
+  Additionally, use translation style that is appropriate for the ${targetLanguage}.
+  Finally, verify the translation again before give it to the user.
+  Translate the following text: ${text}`;
+
+  const model = "gemini-1.5-flash";
+  const GEMINI_API_URL =
+    "https://generativelanguage.googleapis.com/v1beta/models";
+
   const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
-      apiKey,
+    `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: {
@@ -117,15 +144,12 @@ async function fetchTranslation(text, targetLanguage, apiKey) {
             role: "user",
             parts: [
               {
-                text: `You are an expert translator and a helpful assistant that translates text to ${targetLanguage}.
-                Only translate, no more, and carefully check the translation for any grammatical errors.
-                Additionally, use translation style that is appropriate for the ${targetLanguage}.
-                Finally, verify the translation again before give it to the user.
-                Translate the following text: ${text}`,
+                text: prompt,
               },
             ],
           },
         ],
+        safetySettings: safetySettings,
       }),
     },
   );
