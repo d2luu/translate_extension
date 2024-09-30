@@ -91,9 +91,16 @@ async function translateTextWithRetry(
         sendResponse,
         retryCount + 1,
       );
+    } else if (error.message.includes("400")) {
+      sendTranslationResponse(
+        error.message,
+        targetLanguage,
+        tabId,
+        sendResponse,
+      );
     } else {
       sendTranslationResponse(
-        `Error: ${error.message}`,
+        `Error: ${error.message}. Please try again later or check your API key.`,
         targetLanguage,
         tabId,
         sendResponse,
@@ -153,8 +160,12 @@ async function fetchTranslation(text, targetLanguage, apiKey) {
       }),
     },
   );
-
   if (!response.ok) {
+    if (response.status === 400) {
+      throw new Error(
+        "HTTP error 400: Invalid request. Please check your API key or try again later.",
+      );
+    }
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
