@@ -27,8 +27,24 @@ function createTooltip() {
   tooltip.appendChild(loadingIndicator);
 }
 
+function adjustTooltipWidth() {
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (rect.width > 300) {
+      tooltip.style.width = `${rect.width}px`;
+      tooltip.style.maxWidth = "none";
+    } else {
+      tooltip.style.width = "auto";
+      tooltip.style.maxWidth = "300px";
+    }
+  }
+}
+
 function showTooltip(x, y) {
   if (tooltip) {
+    adjustTooltipWidth();
     tooltip.style.left = `${x}px`;
     tooltip.style.top = `${y}px`;
     tooltip.style.display = "block";
@@ -77,6 +93,7 @@ function translateSelectedText() {
     const selection = window.getSelection();
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
+    if (!tooltip) createTooltip();
     showTooltip(rect.left + window.scrollX, rect.bottom + window.scrollY);
     showLoadingIndicator();
     chrome.storage.sync.get("targetLanguage", function (data) {
